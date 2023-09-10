@@ -1,3 +1,4 @@
+import Dashboard from "./components/Dashboard";
 import Form from "./components/Form";
 
 function App() {
@@ -6,7 +7,8 @@ function App() {
 
   return (
     <div className="bg-[#e1edff] h-screen flex justify-center items-center">
-      <Form />
+      {/* <Form /> */}
+      <Dashboard />
     </div>
   );
 }
