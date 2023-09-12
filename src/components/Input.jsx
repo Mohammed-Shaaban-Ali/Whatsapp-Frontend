@@ -9,7 +9,7 @@ const Input = ({
   plasholder = "",
   onChange = () => {},
   value = "",
-  devclasName = "",
+  devclasName = "rounded-sm",
 }) => {
   return (
     <div className={devclasName ? devclasName : "w-1/2"}>
@@ -26,7 +26,7 @@ const Input = ({
         required={isRequired}
         onChange={onChange}
         value={value}
-        className={`rounded-sm bg-gray-50 border border-gray-300 text-gray-900 text-sm  focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  ${className} `}
+        className={` bg-gray-50 border border-gray-300 text-gray-900 text-sm  focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  ${className} `}
       />
     </div>
   );

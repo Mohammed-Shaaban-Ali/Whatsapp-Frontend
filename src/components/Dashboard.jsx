@@ -1,13 +1,34 @@
+import { useEffect, useState } from "react";
 import Input from "./Input";
 import userImage from "../image/user.svg";
 
 const Dashboard = () => {
-  const Contanent = [
-    { name: "test1", status: "available", image: userImage },
-    { name: "test2", status: "available", image: userImage },
-    { name: "test3", status: "available", image: userImage },
-    { name: "test4", status: "available", image: userImage },
-  ];
+  useEffect(() => {
+    const getConversations = async () => {
+      const user = JSON.parse(localStorage.getItem("chatAppUser:user"));
+      try {
+        const res = await fetch(
+          `http://localhost:8000/api/conversation/${user?.id}`, //
+          {
+            method: "Get",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
+        const userData = await res.json();
+        setconversations(userData);
+      } catch (error) {
+        console.log(error);
+      }
+    };
+    getConversations();
+  }, []);
+  const [user, setuser] = useState(
+    JSON.parse(localStorage.getItem("chatAppUser:user"))
+  );
+  const [conversations, setconversations] = useState(null);
+
   return (
     <div className="bg-[#e1edff] h-screen flex justify-center items-center">
       <div className="w-screen flex">
@@ -17,7 +38,7 @@ const Dashboard = () => {
               <img src={userImage} alt="userImage" width={60} height={60} />
             </div>
             <div className="ml-6">
-              <h3 className="text-2xl">Mohammed Shaaban</h3>
+              <h3 className="text-2xl">{user?.fullName}</h3>
               <p className="text-lg font-light">my account</p>
             </div>
           </div>
@@ -25,7 +46,7 @@ const Dashboard = () => {
           <div className="mx-12 mt-8">
             <div className="text-primary text-xl">Messages</div>
             <div className="">
-              {Contanent?.map((item, index) => (
+              {conversations?.map((item, index) => (
                 <div
                   key={index}
                   className="flex  items-center py-6 border-b border-b-gray-300"
@@ -33,17 +54,15 @@ const Dashboard = () => {
                   <div className="cursor-pointer flex items-center">
                     <div className=" border border-blue-300 p-[2px] rounded-full">
                       <img
-                        src={item.image}
-                        alt={item.name}
+                        src={userImage}
+                        alt={item?.user?.fullName}
                         width={45}
                         height={45}
                       />
                     </div>
                     <div className="ml-6">
-                      <h3 className="text-2xl font-semibold">{item.name}</h3>
-                      <p className="text-lg font-light text-gray-600">
-                        {item.status}
-                      </p>
+                      <h5 className="font-semibold">{item?.user?.fullName}</h5>
+                      <p className="text-lg font-light text-gray-600">status</p>
                     </div>
                   </div>
                 </div>

@@ -4,9 +4,9 @@ import Form from "./components/Form";
 
 function App() {
   const ProtectedRoute = ({ children }) => {
-    const user = true; //localStorage.getItem("chatAppUser")!==null;
+    const user = localStorage.getItem("chatAppUser:token") !== null;
 
-    if (user === false) {
+    if (!user) {
       return <Navigate to={"/user/sign-in"} />;
     } else if (
       user &&
