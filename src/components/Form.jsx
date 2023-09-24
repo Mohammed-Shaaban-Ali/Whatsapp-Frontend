@@ -16,7 +16,9 @@ const Form = ({ isSignIn = false }) => {
     e.preventDefault();
     try {
       const res = await fetch(
-        `http://localhost:8000/api/${isSignIn ? "login" : "register"}`, //
+        `https://chat-app-ao0y.onrender.com/api/${
+          isSignIn ? "login" : "register"
+        }`, //
         {
           method: "POST",
           headers: {
