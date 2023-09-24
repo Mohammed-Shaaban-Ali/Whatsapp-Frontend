@@ -1,328 +1,325 @@
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
+import Img1 from "../image/user.svg";
 import Input from "./Input";
-import userImage from "../image/user.svg";
+import { io } from "socket.io-client";
 
 const Dashboard = () => {
-  const [user, setuser] = useState(
+  const [user, setUser] = useState(
     JSON.parse(localStorage.getItem("chatAppUser:user"))
   );
-  const [conversations, setconversations] = useState([]);
-  const [messages, setmessages] = useState({});
-  const [message, setmessage] = useState("");
-  const [users, setusers] = useState([]);
+  const [conversations, setConversations] = useState([]);
+  const [messages, setMessages] = useState({});
+  const [message, setMessage] = useState("");
+  const [users, setUsers] = useState([]);
+  const [socket, setSocket] = useState(null);
+  const messageRef = useRef(null);
 
   useEffect(() => {
-    const getConversations = async () => {
-      try {
-        const res = await fetch(
-          `http://localhost:8000/api/conversation/${user?.id}`, //
-          {
-            method: "Get",
-            headers: {
-              "Content-Type": "application/json",
-            },
-          }
-        );
-        const userData = await res.json();
-        setconversations(userData);
-      } catch (error) {
-        console.log(error);
-      }
-    };
-    getConversations();
+    setSocket(io("http://localhost:8080"));
   }, []);
 
   useEffect(() => {
-    const getusers = async () => {
-      try {
-        const res = await fetch(
-          `http://localhost:8000/api/users/${user?.id}`, //
-          {
-            method: "Get",
-            headers: {
-              "Content-Type": "application/json",
-            },
-          }
-        );
-        const userData = await res.json();
-        setusers(userData);
-      } catch (error) {
-        console.log(error);
-      }
-    };
-    getusers();
-  }, []);
-  const getMesages = async (data) => {
-    try {
+    socket?.emit("addUser", user?.id);
+    socket?.on("getUsers", (users) => {
+      console.log("activeUsers :>> ", users);
+    });
+    socket?.on("getMessage", (data) => {
+      setMessages((prev) => ({
+        ...prev,
+        messages: [
+          ...prev.messages,
+          { user: data.user, message: data.message },
+        ],
+      }));
+    });
+  }, [socket]);
+
+  useEffect(() => {
+    messageRef?.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages?.messages]);
+
+  useEffect(() => {
+    const loggedInUser = JSON.parse(localStorage.getItem("chatAppUser:user"));
+    const fetchConversations = async () => {
       const res = await fetch(
-        `http://localhost:8000/api/meessage/${data?.ConversationId}?senderId=${user?.id}&&receiverId=${data?.user?.receiverId}`, //
+        `http://localhost:8000/api/conversations/${loggedInUser?.id}`,
         {
-          method: "Get",
+          method: "GET",
           headers: {
             "Content-Type": "application/json",
           },
         }
       );
-      const userData = await res.json();
-      setmessages({
-        userData,
-        user: data?.user,
-        ConversationId: data?.ConversationId,
+      const resData = await res.json();
+      setConversations(resData);
+    };
+    fetchConversations();
+  }, []);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      const res = await fetch(`http://localhost:8000/api/users/${user?.id}`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
       });
-    } catch (error) {
-      console.log(error);
-    }
+      const resData = await res.json();
+      setUsers(resData);
+    };
+    fetchUsers();
+  }, []);
+
+  const fetchMessages = async (conversationId, receiver) => {
+    const res = await fetch(
+      `http://localhost:8000/api/message/${conversationId}?senderId=${user?.id}&&receiverId=${receiver?.receiverId}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    );
+    const resData = await res.json();
+    setMessages({ messages: resData, receiver, conversationId });
   };
-  const sendMessage = async () => {
-    try {
-      const res = await fetch(
-        `http://localhost:8000/api/meessage`, //
-        {
-          method: "Post",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            conversationId: messages?.ConversationId,
-            senderId: user.id,
-            message,
-            receiverId: messages?.user?.receiverId,
-          }),
-        }
-      );
-      setmessage("");
-    } catch (error) {
-      console.log(error);
-    }
+
+  const sendMessage = async (e) => {
+    setMessage("");
+    socket?.emit("sendMessage", {
+      senderId: user?.id,
+      receiverId: messages?.receiver?.receiverId,
+      message,
+      conversationId: messages?.conversationId,
+    });
+    const res = await fetch(`http://localhost:8000/api/message`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        conversationId: messages?.conversationId,
+        senderId: user?.id,
+        message,
+        receiverId: messages?.receiver?.receiverId,
+      }),
+    });
   };
 
   return (
-    <div className="bg-[#e1edff] h-screen flex justify-center items-center">
-      <div className="w-screen flex">
-        <div className="w-[25%] border  h-screen ">
-          <div className="flex justify-center items-center my-8">
-            <div className=" border border-primary p-[2px] rounded-full">
-              <img src={userImage} alt="userImage" width={60} height={60} />
-            </div>
-            <div className="ml-6">
-              <h3 className="text-xl font-semibold">{user?.fullName}</h3>
-              <p className="text-sm font-light">my account</p>
-            </div>
+    <div className="w-screen flex">
+      <div className="w-[25%] h-screen bg-secondary overflow-scroll">
+        <div className="flex items-center my-6 mx-12">
+          <div>
+            <img
+              src={Img1}
+              width={55}
+              height={55}
+              className="border border-primary p-[2px] rounded-full"
+            />
           </div>
-          <hr />
-          <div className="mx-12 mt-8">
-            <div className="text-primary text-xl">Messages</div>
-            <div className="">
-              {conversations?.length > 0 ? (
-                conversations?.map((item, index) => (
+          <div className="ml-8">
+            <h3 className="text-lg font-semibold">{user?.fullName}</h3>
+            <p className="text-lg font-light">My Account</p>
+          </div>
+        </div>
+        <hr />
+        <div className="mx-14 mt-10">
+          <div className="text-primary text-lg">Messages</div>
+          <div>
+            {conversations.length > 0 ? (
+              conversations.map(({ conversationId, user }, index) => {
+                return (
                   <div
                     key={index}
-                    className="flex  items-center py-6 border-b border-b-gray-300"
+                    className="flex items-center py-8 border-b border-b-gray-300"
                   >
                     <div
-                      onClick={() => {
-                        getMesages({
-                          ConversationId: item?.conversationId,
-                          user: item?.user,
-                        });
-                      }}
                       className="cursor-pointer flex items-center"
+                      onClick={() => fetchMessages(conversationId, user)}
                     >
-                      <div className=" border border-blue-300 p-[2px] rounded-full">
+                      <div>
                         <img
-                          src={userImage}
-                          alt={item?.user?.fullName}
-                          width={45}
-                          height={45}
+                          src={Img1}
+                          style={{ width: "45px", height: "45px" }}
+                          className="w-[60px] h-[60px] rounded-full p-[2px] border border-primary"
                         />
                       </div>
-                      <div className="ml-6">
-                        <h5 className="font-semibold">
-                          {item?.user?.fullName}
-                        </h5>
+                      <div className="ml-4">
+                        <h3 className="text-lg font-semibold">
+                          {user?.fullName}
+                        </h3>
                         <p className="text-sm font-light text-gray-600">
-                          {item?.user?.email}
+                          {user?.email}
                         </p>
                       </div>
                     </div>
                   </div>
-                ))
-              ) : (
-                <p className="text-center font-semibold text-lg mt-14">
-                  No Conversation
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
-
-        <div className="w-[50%] border h-screen bg-white flex flex-col items-center">
-          <div className="w-[75%] bg-secondary h-[60px] rounded-full flex items-center mt-4 mb-4 px-14">
-            {messages?.user?.fullName && (
-              <>
-                <div className=" border border-primary p-[2px] rounded-full">
-                  <img src={userImage} alt="userImage" width={40} height={40} />
-                </div>
-                <div className="ml-4">
-                  <h3 className=" text-lg font-semibold">
-                    {messages?.user?.fullName}
-                  </h3>
-                  <p className="text-sm font-light">{messages?.user?.email}</p>
-                </div>
-                <div className="cursor-pointer ml-auto">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="icon icon-tabler icon-tabler-phone-plus"
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24"
-                    strokeWidth="2"
-                    stroke="currentColor"
-                    fill="none"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
-                    <path d="M5 4h4l2 5l-2.5 1.5a11 11 0 0 0 5 5l1.5 -2.5l5 2v4a2 2 0 0 1 -2 2a16 16 0 0 1 -15 -15a2 2 0 0 1 2 -2"></path>
-                    <path d="M15 6h6m-3 -3v6"></path>
-                  </svg>
-                </div>
-              </>
+                );
+              })
+            ) : (
+              <div className="text-center text-lg font-semibold mt-24">
+                No Conversations
+              </div>
             )}
           </div>
-          {messages?.userData?.length > 0 ? (
-            <>
-              <div className="h-[75%] w-full border overflow-y-scroll">
-                <div className=" p-14">
-                  {messages?.userData?.map((message, index) => {
-                    if (message?.user?.id === user?.id) {
-                      return (
-                        <div
-                          key={index}
-                          className="max-w-[60%] w-fit bg-secondary rounded-b-xl rounded-tr-xl p-4 mb-6"
-                        >
-                          {message?.message}
-                        </div>
-                      );
-                    } else {
-                      return (
-                        <div
-                          key={index}
-                          className="max-w-[60%] w-fit bg-primary text-white rounded-b-xl rounded-tr-xl p-4 ml-auto mb-6"
-                        >
-                          {message?.message}
-                        </div>
-                      );
-                    }
-                  })}
-                </div>
-              </div>
-            </>
-          ) : (
-            <p className="h-[75%]  text-center font-semibold text-lg flex items-center m-auto">
-              No Message or no`t Select Conversation
-            </p>
-          )}
-          {messages?.user?.fullName && (
-            <div className="p-8 w-full flex items-center">
-              <Input
-                value={message}
-                onChange={(e) => setmessage(e.target.value)}
-                devclasName="w-[75%]"
-                className="rounded-full shadow-md bg-secondary p-2 px-4 border-0 focus:ring-0 focus:bottom-0 outline-none "
-                plasholder="Type a message..."
-              />
-              <div
-                className={`ml-4 p-3  bg-light rounded-full ${
-                  !message ? "pointer-events-none" : "cursor-pointer"
-                }`}
-              >
-                <svg
-                  onClick={() => sendMessage()}
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="icon icon-tabler icon-tabler-send"
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  strokeWidth="2"
-                  stroke="currentColor"
-                  fill="none"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
-                  <path d="M10 14l11 -11"></path>
-                  <path d="M21 3l-6.5 18a.55 .55 0 0 1 -1 0l-3.5 -7l-7 -3.5a.55 .55 0 0 1 0 -1l18 -6.5"></path>
-                </svg>
-              </div>
-              <div className="ml-3 p-3 cursor-pointer bg-light rounded-full">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="icon icon-tabler icon-tabler-circle-plus"
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  strokeWidth="2"
-                  stroke="currentColor"
-                  fill="none"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
-                  <path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0"></path>
-                  <path d="M9 12h6"></path>
-                  <path d="M12 9v6"></path>
-                </svg>
-              </div>
-            </div>
-          )}
         </div>
-
-        <div className="w-[25%] border  h-screen">
-          <div className="mx-12 mt-8">
-            <div className="text-primary text-xl">Pepole</div>
-            <div className="">
-              {users?.length > 0 ? (
-                users?.map((item, index) => (
-                  <div
-                    key={index}
-                    className="flex  items-center py-6 border-b border-b-gray-300"
-                  >
-                    <div
-                      onClick={() => {
-                        getMesages({
-                          ConversationId: "new",
-                          user: item?.user,
-                        });
-                      }}
-                      className="cursor-pointer flex items-center"
-                    >
-                      <div className=" border border-blue-300 p-[2px] rounded-full">
-                        <img
-                          src={userImage}
-                          alt={item?.user?.fullName}
-                          width={45}
-                          height={45}
-                        />
-                      </div>
-                      <div className="ml-6">
-                        <h5 className="font-semibold">
-                          {item?.user?.fullName}
-                        </h5>
-                        <p className="text-sm font-light text-gray-600">
-                          {item?.user?.email}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <p className="text-center font-semibold text-lg mt-14">
-                  No Users
-                </p>
-              )}
+      </div>
+      <div className="w-[50%] h-screen bg-white flex flex-col items-center">
+        {messages?.receiver?.fullName && (
+          <div className="w-[75%] bg-secondary h-[80px] my-14 rounded-full flex items-center px-14 py-2">
+            <div className="cursor-pointer">
+              <img src={Img1} width={60} height={60} className="rounded-full" />
+            </div>
+            <div className="ml-6 mr-auto">
+              <h3 className="text-lg">{messages?.receiver?.fullName}</h3>
+              <p className="text-sm font-light text-gray-600">
+                {messages?.receiver?.email}
+              </p>
+            </div>
+            <div className="cursor-pointer">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="icon icon-tabler icon-tabler-phone-outgoing"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                strokeWidth="1.5"
+                stroke="black"
+                fill="none"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                <path d="M5 4h4l2 5l-2.5 1.5a11 11 0 0 0 5 5l1.5 -2.5l5 2v4a2 2 0 0 1 -2 2a16 16 0 0 1 -15 -15a2 2 0 0 1 2 -2" />
+                <line x1="15" y1="9" x2="20" y2="4" />
+                <polyline points="16 4 20 4 20 8" />
+              </svg>
             </div>
           </div>
+        )}
+        <div className="h-[75%] w-full overflow-scroll shadow-sm">
+          <div className="p-14">
+            {messages?.messages?.length > 0 ? (
+              messages.messages.map(({ message, user: { id } = {} }, index) => {
+                return (
+                  <Fragment key={index}>
+                    <div
+                      className={`max-w-[40%] rounded-b-xl p-4 mb-6 ${
+                        id === user?.id
+                          ? "bg-primary text-white rounded-tl-xl ml-auto"
+                          : "bg-secondary rounded-tr-xl"
+                      } `}
+                    >
+                      {message}
+                    </div>
+                    <div ref={messageRef}></div>
+                  </Fragment>
+                );
+              })
+            ) : (
+              <div className="text-center text-lg font-semibold mt-24">
+                No Messages or No Conversation Selected
+              </div>
+            )}
+          </div>
+        </div>
+        {messages?.receiver?.fullName && (
+          <div className="p-14 w-full flex items-center">
+            <Input
+              plasholder="Type a message..."
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              devclasName="w-[75%]"
+              className="rounded-full shadow-md bg-secondary p-2 px-4 border-0 focus:ring-0 focus:bottom-0 outline-none "
+            />
+            <div
+              className={`ml-4 p-2 cursor-pointer bg-light rounded-full ${
+                !message && "pointer-events-none"
+              }`}
+              onClick={() => sendMessage()}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="icon icon-tabler icon-tabler-send"
+                width="30"
+                height="30"
+                viewBox="0 0 24 24"
+                strokeWidth="1.5"
+                stroke="#2c3e50"
+                fill="none"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                <line x1="10" y1="14" x2="21" y2="3" />
+                <path d="M21 3l-6.5 18a0.55 .55 0 0 1 -1 0l-3.5 -7l-7 -3.5a0.55 .55 0 0 1 0 -1l18 -6.5" />
+              </svg>
+            </div>
+            <div
+              className={`ml-4 p-2 cursor-pointer bg-light rounded-full ${
+                !message && "pointer-events-none"
+              }`}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="icon icon-tabler icon-tabler-circle-plus"
+                width="30"
+                height="30"
+                viewBox="0 0 24 24"
+                strokeWidth="1.5"
+                stroke="#2c3e50"
+                fill="none"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                <circle cx="12" cy="12" r="9" />
+                <line x1="9" y1="12" x2="15" y2="12" />
+                <line x1="12" y1="9" x2="12" y2="15" />
+              </svg>
+            </div>
+          </div>
+        )}
+      </div>
+      <div className="w-[25%] h-screen bg-light px-8 py-16 overflow-scroll">
+        <div className="text-primary text-lg">People</div>
+        <div>
+          {users.length > 0 ? (
+            users.map(({ userId, user }, index) => {
+              return (
+                <div
+                  key={index}
+                  className="flex items-center py-8 border-b border-b-gray-300"
+                >
+                  <div
+                    className="cursor-pointer flex items-center"
+                    onClick={() => fetchMessages("new", user)}
+                  >
+                    <div>
+                      <img
+                        src={Img1}
+                        style={{ width: "45px", height: "45px" }}
+                        className="w-[60px] h-[60px] rounded-full p-[2px] border border-primary"
+                      />
+                    </div>
+                    <div className="ml-4">
+                      <h3 className="text-lg font-semibold">
+                        {user?.fullName}
+                      </h3>
+                      <p className="text-sm font-light text-gray-600">
+                        {user?.email}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <div className="text-center text-lg font-semibold mt-24">
+              No Conversations
+            </div>
+          )}
         </div>
       </div>
     </div>
