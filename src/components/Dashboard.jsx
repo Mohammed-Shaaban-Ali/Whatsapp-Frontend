@@ -15,7 +15,7 @@ const Dashboard = () => {
   const messageRef = useRef(null);
 
   useEffect(() => {
-    setSocket(io("http://localhost:8080"));
+    setSocket(io("https://chat-app-ao0y.onrender.com"));
   }, []);
 
   useEffect(() => {
@@ -42,7 +42,7 @@ const Dashboard = () => {
     const loggedInUser = JSON.parse(localStorage.getItem("chatAppUser:user"));
     const fetchConversations = async () => {
       const res = await fetch(
-        `http://localhost:8000/api/conversations/${loggedInUser?.id}`,
+        `https://chat-app-ao0y.onrender.com/api/conversations/${loggedInUser?.id}`,
         {
           method: "GET",
           headers: {
@@ -58,12 +58,15 @@ const Dashboard = () => {
 
   useEffect(() => {
     const fetchUsers = async () => {
-      const res = await fetch(`http://localhost:8000/api/users/${user?.id}`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
+      const res = await fetch(
+        `https://chat-app-ao0y.onrender.com/api/users/${user?.id}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
       const resData = await res.json();
       setUsers(resData);
     };
@@ -72,7 +75,7 @@ const Dashboard = () => {
 
   const fetchMessages = async (conversationId, receiver) => {
     const res = await fetch(
-      `http://localhost:8000/api/message/${conversationId}?senderId=${user?.id}&&receiverId=${receiver?.receiverId}`,
+      `https://chat-app-ao0y.onrender.com/api/message/${conversationId}?senderId=${user?.id}&&receiverId=${receiver?.receiverId}`,
       {
         method: "GET",
         headers: {
@@ -92,7 +95,7 @@ const Dashboard = () => {
       message,
       conversationId: messages?.conversationId,
     });
-    const res = await fetch(`http://localhost:8000/api/message`, {
+    const res = await fetch(`https://chat-app-ao0y.onrender.com/api/message`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
